@@ -1,0 +1,105 @@
+{{ define "main" }}
+<div class="home-content">
+    {{ .Content }}
+
+    <!-- 今日文章 -->
+    <section class="articles-section">
+        <h2>{{ if eq .Site.Language.Lang "zh" }}📅 今日热点{{ else }}📅 Today's Highlights{{ end }}</h2>
+        <div class="articles-grid">
+            {{ $allSites := .Site.Sites }}
+            {{ $posts := slice }}
+            {{ range $allSites }}
+            {{ $sitePages := .RegularPages }}
+            {{ $sitePosts := where $sitePages ".File.Dir" "in" (printf "%s/posts/" $.Site.Language.Lang) }}
+            {{ $posts = $posts | append $sitePosts }}
+            {{ end }}
+            {{ $posts = $posts | first 3 }}
+            {{ range first 3 $posts }}
+            <article class="article-card">
+                <h3><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
+                <div class="article-meta">
+                    <time>{{ .Date.Format "15:04" }}</time>
+                    {{ if .Params.tags }}
+                    <div class="tags">
+                        {{ range first 3 .Params.tags }}
+                        <span class="tag">#{{ . }}</span>
+                        {{ end }}
+                    </div>
+                    {{ end }}
+                </div>
+                {{ if .Description }}
+                <p class="article-description">{{ .Description | truncate 120 }}</p>
+                {{ else }}
+                <p class="article-description">{{ .Summary | truncate 120 }}</p>
+                {{ end }}
+            </article>
+            {{ else }}
+            <p class="no-articles">
+                {{ if eq .Site.Language.Lang "zh" }}
+                今日暂无新文章
+                {{ else }}
+                No articles today yet
+                {{ end }}
+            </p>
+            {{ end }}
+        </div>
+    </section>
+
+    <!-- 昨日文章 -->
+    <section class="articles-section">
+        <h2>{{ if eq .Site.Language.Lang "zh" }}📰 昨日回顾{{ else }}📰 Yesterday's Review{{ end }}</h2>
+        <div class="articles-grid">
+            {{ $yesterday := (now.AddDate 0 0 -1).Format "2006-01-02" }}
+            {{ $yesterdayStart := time $yesterday }}
+            {{ $yesterdayEnd := $yesterdayStart.AddDate 0 0 1 }}
+            {{ $allSites := .Site.Sites }}
+            {{ $allPosts := slice }}
+            {{ range $allSites }}
+            {{ $sitePages := .RegularPages }}
+            {{ $sitePosts := where $sitePages ".File.Dir" "in" (printf "%s/posts/" $.Site.Language.Lang) }}
+            {{ $allPosts = $allPosts | append $sitePosts }}
+            {{ end }}
+            {{ $yesterdayPosts := where $allPosts ".Date" "ge" $yesterdayStart }}
+            {{ $yesterdayPosts = where $yesterdayPosts ".Date" "lt" $yesterdayEnd }}
+            {{ $yesterdayPosts = $yesterdayPosts | first 3 }}
+            {{ if $yesterdayPosts }}
+            {{ range $yesterdayPosts }}
+            <article class="article-card">
+                <h3><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
+                <div class="article-meta">
+                    <time>{{ .Date.Format "15:04" }}</time>
+                    {{ if .Params.tags }}
+                    <div class="tags">
+                        {{ range first 3 .Params.tags }}
+                        <span class="tag">#{{ . }}</span>
+                        {{ end }}
+                    </div>
+                    {{ end }}
+                </div>
+                {{ if .Description }}
+                <p class="article-description">{{ .Description | truncate 120 }}</p>
+                {{ else }}
+                <p class="article-description">{{ .Summary | truncate 120 }}</p>
+                {{ end }}
+            </article>
+            {{ end }}
+            {{ else }}
+            <p class="no-articles">
+                {{ if eq .Site.Language.Lang "zh" }}
+                昨日无文章
+                {{ else }}
+                No articles yesterday
+                {{ end }}
+            </p>
+            {{ end }}
+        </div>
+    </section>
+
+    <!-- 查看更多 -->
+    <div class="view-more">
+        <a href="{{ if eq .Site.Language.Lang " zh" }}/zh/posts/{{ else }}/posts/{{ end }}" class="btn-primary">
+            {{ if eq .Site.Language.Lang "zh" }}查看所有文章{{ else }}View All Articles{{ end }}
+        </a>
+    </div>
+</div>
+{{ end }}

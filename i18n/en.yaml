@@ -1,0 +1,14 @@
+- id: prev_page
+  translation: 'Prev Page'
+
+- id: next_page
+  translation: 'Next Page'
+
+- id: switch_to
+  translation: 'Switch to'
+
+- id: language_en
+  translation: 'English'
+
+- id: language_zh
+  translation: '简体中文'

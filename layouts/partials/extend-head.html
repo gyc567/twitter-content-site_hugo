@@ -1,0 +1,9 @@
+{{- if site.Params.customCSS -}}
+  {{- range site.Params.customCSS -}}
+    {{- $css := resources.Get . -}}
+    {{- if $css -}}
+      {{- $css = $css | resources.Minify -}}
+      <link rel="stylesheet" href="{{ $css.RelPermalink }}">
+    {{- end -}}
+  {{- end -}}
+{{- end -}}

@@ -1,0 +1,28 @@
+{{ if .Site.Params.monetagId }}
+<!-- Monetag Head Script -->
+<script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+<script>
+  window.googletag = window.googletag || {cmd: []};
+  googletag.cmd.push(function() {
+    googletag.defineSlot('/{{ .Site.Params.monetagId }}/header', [[728, 90], [320, 50]], 'div-gpt-ad-header').addService(googletag.pubads());
+    googletag.defineSlot('/{{ .Site.Params.monetagId }}/sidebar', [[300, 250], [336, 280]], 'div-gpt-ad-sidebar').addService(googletag.pubads());
+    googletag.defineSlot('/{{ .Site.Params.monetagId }}/footer', [[728, 90], [320, 50]], 'div-gpt-ad-footer').addService(googletag.pubads());
+    googletag.pubads().enableSingleRequest();
+    googletag.enableServices();
+  });
+</script>
+
+<!-- Monetag Push Notifications -->
+<script src="//cst.live/pnads.js" async></script>
+<script>
+  (function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    var p = 'https:' == d.location.protocol ? 'https' : 'http';
+    if (d.getElementById(id)) return;
+    js = d.createElement(s);
+    js.id = id;
+    js.src = p + '://platform.monetag.com/widget.js#' + '{{ .Site.Params.monetagId }}';
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'monetag-jssdk'));
+</script>
+{{ end }}

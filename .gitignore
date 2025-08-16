@@ -1,0 +1,40 @@
+# Hugo
+/public/
+/resources/_gen/
+/assets/jsconfig.json
+hugo_stats.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# API Keys (never commit these!)
+.env.local
+.env.production
+
+# Build
+/dist/
+/build/
+
+# Node (if using any JS tools)
+node_modules/
+package-lock.json
+yarn.lock

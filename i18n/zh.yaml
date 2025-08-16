@@ -1,0 +1,14 @@
+- id: prev_page
+  translation: '上一页'
+
+- id: next_page
+  translation: '下一页'
+
+- id: switch_to
+  translation: '切换到'
+
+- id: language_en
+  translation: 'English'
+
+- id: language_zh
+  translation: '简体中文'
