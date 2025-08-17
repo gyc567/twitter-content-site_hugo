@@ -6,6 +6,7 @@
 
 - 🔥 **自动抓取Twitter热门话题**：每天自动获取Twitter上最热门的3个话题
 - 👥 **账号监控功能**：监控指定Twitter账号的最新推文，生成原始内容和AI分析文章
+- 🛡️ **多重API兜底**：支持TwitterAPI.io + Twikit双重保障，确保服务稳定性
 - 🤖 **AI内容生成**：使用OpenAI自动生成高质量文章
 - 🌍 **双语支持**：支持简体中文和美国英语
 - 💰 **广告变现**：集成Monetag广告系统
@@ -45,15 +46,24 @@ pip install -r requirements.txt
 
 在GitHub仓库设置中添加以下Secrets：
 
-- `TWITTER_API_KEY`：TwitterAPI.io API密钥
+**Twitter API配置（至少配置一种）：**
+- `TWITTER_API_KEY`：TwitterAPI.io API密钥（主要方案）
+- `TWITTER_USERNAME`：Twitter用户名（兜底方案）
+- `TWITTER_PASSWORD`：Twitter密码（兜底方案）
+- `TWITTER_EMAIL`：Twitter邮箱（兜底方案）
+
+**AI服务配置：**
 - `OPENAI_API_KEY`：OpenAI API密钥
 - `AI_API_KEY`：备用AI服务API密钥（可选）
 - `AI_BASE_URL`：备用AI服务地址（可选）
+
+**监控配置：**
 - `TWT_ACCOUNTS`：要监控的Twitter账号列表，用逗号分隔（如：elonmusk,a16z,lookonchain）
 
 获取方式：
 - TwitterAPI.io：访问 https://twitterapi.io/
 - OpenAI API：访问 https://platform.openai.com/
+- Twikit：使用真实的Twitter账号凭据
 
 ### 4. 配置Monetag
 
@@ -134,6 +144,67 @@ python scripts/test_monitor_accounts.py
 - 默认只处理最近24小时内的推文
 - 如果没有最近推文，会使用所有获取到的推文
 - 可以在脚本中修改时间范围
+
+## Twitter API兜底方案
+
+### 双重保障机制
+
+本项目实现了Twitter API的双重保障机制：
+
+1. **主要方案：TwitterAPI.io**
+   - 商业API服务，稳定可靠
+   - 需要付费API密钥
+   - 速度快，限制少
+
+2. **兜底方案：Twikit**
+   - 开源Python库，模拟浏览器行为
+   - 使用真实Twitter账号登录
+   - 免费使用，但可能受到限制
+
+### 工作原理
+
+```
+尝试TwitterAPI.io → 失败 → 自动切换到Twikit → 成功获取数据
+```
+
+### 配置方式
+
+**方案一：仅使用TwitterAPI.io**
+```bash
+TWITTER_API_KEY=your_api_key
+```
+
+**方案二：仅使用Twikit**
+```bash
+TWITTER_USERNAME=your_username
+TWITTER_PASSWORD=your_password
+TWITTER_EMAIL=your_email
+```
+
+**方案三：双重保障（推荐）**
+```bash
+# 主要方案
+TWITTER_API_KEY=your_api_key
+
+# 兜底方案
+TWITTER_USERNAME=your_username
+TWITTER_PASSWORD=your_password
+TWITTER_EMAIL=your_email
+```
+
+### 测试兜底功能
+
+```bash
+# 测试所有Twitter API方案
+python scripts/test_twitter_fallback.py
+```
+
+### 注意事项
+
+- Twikit使用真实账号登录，请确保账号安全
+- 建议使用专门的测试账号，避免影响主账号
+- Twikit可能受到Twitter的反爬虫限制
+- 建议优先配置TwitterAPI.io，Twikit作为备用
 
 ## 部署
 

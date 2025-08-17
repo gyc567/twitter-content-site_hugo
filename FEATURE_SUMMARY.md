@@ -149,6 +149,7 @@ TWT_ACCOUNTS=lookonchain,elonmusk,a16z
 - ✅ **双语支持**：中英文同步生成
 - ✅ **智能过滤**：只处理最近24小时的推文
 - ✅ **容错处理**：支持主备AI服务切换
+- ✅ **Twitter API兜底**：TwitterAPI.io + Twikit双重保障
 - ✅ **格式统一**：遵循项目的文章模板
 - ✅ **易于配置**：通过环境变量简单配置
 - ✅ **测试完备**：提供完整的测试脚本
@@ -160,6 +161,39 @@ TWT_ACCOUNTS=lookonchain,elonmusk,a16z
 - ✅ 提供了配置示例
 - ✅ 包含故障排除指南
 
+## 🛡️ 新增兜底方案
+
+### Twitter API双重保障
+
+基于twikit库实现的兜底方案：
+
+1. **统一客户端架构**
+   - `UnifiedTwitterClient` - 统一接口
+   - `TwitterAPIClient` - TwitterAPI.io客户端
+   - `TwikitClient` - Twikit客户端
+
+2. **自动切换机制**
+   ```
+   TwitterAPI.io → 失败 → Twikit → 成功/失败
+   ```
+
+3. **新增文件**
+   - `scripts/twitter_client.py` - 统一Twitter客户端
+   - `scripts/test_twitter_fallback.py` - 兜底方案测试
+   - `TWITTER_FALLBACK.md` - 详细技术文档
+
+4. **配置更新**
+   - 支持Twikit登录凭据配置
+   - GitHub Actions环境变量更新
+   - requirements.txt添加twikit依赖
+
+### 技术优势
+
+- **高可用性**：双重API保障，降低服务中断风险
+- **成本优化**：Twikit免费使用，降低API成本
+- **灵活配置**：支持单独或组合使用两种方案
+- **透明切换**：用户无感知的自动切换
+
 ---
 
-**总结**：Twitter账号监控功能已完全实现并集成到现有系统中，可以在每天零晨12点自动运行，生成高质量的双语内容。功能经过测试验证，文档完整，可以立即投入使用。
+**总结**：Twitter账号监控功能已完全实现并集成到现有系统中，现在具备了TwitterAPI.io + Twikit的双重保障机制。系统可以在每天零晨12点自动运行，即使主要API服务不可用，也能通过兜底方案确保正常生成高质量的双语内容。功能经过测试验证，文档完整，具备生产环境的可靠性。

@@ -7,12 +7,16 @@ Twitter热门内容抓取和文章生成脚本
 import os
 import json
 import requests
+import asyncio
 from datetime import datetime
 from typing import List, Dict
 import openai
 from pathlib import Path
 import re
 from dotenv import load_dotenv
+
+# 导入新的Twitter客户端
+from twitter_client import UnifiedTwitterClient
 
 # 加载环境变量
 load_dotenv()
@@ -28,21 +32,16 @@ CONTENT_DIR = Path(__file__).parent.parent / 'content'
 openai.api_key = OPENAI_API_KEY
 
 class TwitterTrendFetcher:
-    """Twitter趋势获取器"""
+    """Twitter趋势获取器 - 使用统一客户端"""
     
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-        self.headers = {
-            'X-API-Key': api_key,
-            'User-Agent': 'TwitterTrendBot/1.0'
-        }
+    def __init__(self):
+        self.client = UnifiedTwitterClient()
+        print("✅ 统一Twitter客户端已初始化")
     
-    def get_crypto_trending_topics(self, max_results: int = 100) -> List[Dict]:
+    async def get_crypto_trending_topics_async(self, max_results: int = 100) -> List[Dict]:
         """
-        获取区块链和加密货币相关的热门话题
+        异步获取区块链和加密货币相关的热门话题
         """
-        url = "https://api.twitterapi.io/twitter/tweet/advanced_search"
-        
         # 区块链和加密货币相关的搜索关键词
         crypto_queries = [
             "bitcoin OR BTC OR 比特币",
@@ -57,19 +56,9 @@ class TwitterTrendFetcher:
         all_tweets = []
         
         for query in crypto_queries:
-            params = {
-                'query': query,
-                'max_results': 20,  # 每个查询获取20条
-                'sort_order': 'relevancy'
-            }
-            
             try:
                 print(f"🔍 搜索关键词: {query}")
-                response = requests.get(url, headers=self.headers, params=params)
-                response.raise_for_status()
-                data = response.json()
-                
-                tweets = data.get('tweets', [])
+                tweets = await self.client.search_tweets(query, max_results=20)
                 print(f"   找到 {len(tweets)} 条相关推文")
                 all_tweets.extend(tweets)
                 
@@ -79,8 +68,12 @@ class TwitterTrendFetcher:
         
         print(f"📊 总共收集到 {len(all_tweets)} 条加密货币相关推文")
         return self._get_top_tweets_by_engagement(all_tweets)
-        
-        return all_tweets
+    
+    def get_crypto_trending_topics(self, max_results: int = 100) -> List[Dict]:
+        """
+        获取区块链和加密货币相关的热门话题（同步版本）
+        """
+        return asyncio.run(self.get_crypto_trending_topics_async(max_results))
     
     def _get_top_tweets_by_engagement(self, tweets: List[Dict]) -> List[Dict]:
         """
@@ -796,9 +789,14 @@ def main():
     """主函数"""
     print("开始生成今日内容...")
     
-    # 检查环境变量
-    if not TWITTER_API_KEY:
-        print("错误：请设置TWITTER_API_KEY环境变量")
+    # 检查Twitter API配置
+    has_twitter_api = bool(os.environ.get('TWITTER_API_KEY'))
+    has_twikit_config = bool(os.environ.get('TWITTER_USERNAME') and os.environ.get('TWITTER_PASSWORD'))
+    
+    if not has_twitter_api and not has_twikit_config:
+        print("❌ 错误：请配置Twitter API密钥或Twikit登录凭据")
+        print("   TwitterAPI.io: 设置 TWITTER_API_KEY")
+        print("   Twikit: 设置 TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_EMAIL")
         return
     
     if not OPENAI_API_KEY or OPENAI_API_KEY == "your_openai_api_key_here":
@@ -808,7 +806,7 @@ def main():
         demo_mode = False
     
     # 初始化组件
-    fetcher = TwitterTrendFetcher(TWITTER_API_KEY)
+    fetcher = TwitterTrendFetcher()
     if not demo_mode:
         generator = ContentGenerator(
             api_key=OPENAI_API_KEY,

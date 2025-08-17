@@ -7,12 +7,16 @@ Twitter账号监控脚本
 import os
 import json
 import requests
+import asyncio
 from datetime import datetime, timedelta
 from typing import List, Dict
 import openai
 from pathlib import Path
 import re
 from dotenv import load_dotenv
+
+# 导入新的Twitter客户端
+from twitter_client import UnifiedTwitterClient, get_all_monitored_tweets_sync
 
 # 加载环境变量
 load_dotenv()
@@ -26,76 +30,31 @@ TWT_ACCOUNTS = os.environ.get('TWT_ACCOUNTS', '').split(',')
 CONTENT_DIR = Path(__file__).parent.parent / 'content'
 
 class TwitterAccountMonitor:
-    """Twitter账号监控器"""
+    """Twitter账号监控器 - 使用统一客户端"""
     
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-        self.headers = {
-            'X-API-Key': api_key,
-            'User-Agent': 'TwitterAccountMonitor/1.0'
-        }
+    def __init__(self):
+        self.client = UnifiedTwitterClient()
+        print("✅ 统一Twitter客户端已初始化")
+    
+    async def get_user_tweets_async(self, username: str, max_results: int = 10) -> List[Dict]:
+        """异步获取指定用户的最新推文"""
+        return await self.client.get_user_tweets(username, max_results)
     
     def get_user_tweets(self, username: str, max_results: int = 10) -> List[Dict]:
-        """
-        获取指定用户的最新推文
-        """
-        url = "https://api.twitterapi.io/twitter/user/tweets"
-        
-        params = {
-            'username': username.replace('@', ''),
-            'max_results': max_results,
-            'exclude': 'retweets,replies'  # 排除转推和回复
-        }
-        
-        try:
-            print(f"🔍 获取 @{username} 的最新推文...")
-            response = requests.get(url, headers=self.headers, params=params)
-            response.raise_for_status()
-            data = response.json()
-            
-            tweets = data.get('tweets', [])
-            print(f"   找到 {len(tweets)} 条推文")
-            return tweets
-            
-        except Exception as e:
-            print(f"   获取失败: {e}")
-            return []
+        """获取指定用户的最新推文（同步版本）"""
+        return asyncio.run(self.get_user_tweets_async(username, max_results))
+    
+    async def get_all_monitored_tweets_async(self, accounts: List[str]) -> Dict[str, List[Dict]]:
+        """异步获取所有监控账号的推文"""
+        return await get_all_monitored_tweets_sync(self.client, accounts)
     
     def get_all_monitored_tweets(self, accounts: List[str]) -> Dict[str, List[Dict]]:
-        """
-        获取所有监控账号的推文
-        """
-        all_tweets = {}
-        
-        for account in accounts:
-            account = account.strip()
-            if account:
-                tweets = self.get_user_tweets(account)
-                if tweets:
-                    all_tweets[account] = tweets
-        
-        return all_tweets
+        """获取所有监控账号的推文（同步版本）"""
+        return get_all_monitored_tweets_sync(self.client, accounts)
     
     def filter_recent_tweets(self, tweets: List[Dict], hours: int = 24) -> List[Dict]:
-        """
-        过滤最近指定小时内的推文
-        """
-        cutoff_time = datetime.now() - timedelta(hours=hours)
-        recent_tweets = []
-        
-        for tweet in tweets:
-            created_at = tweet.get('createdAt', '')
-            if created_at:
-                try:
-                    # 解析推文时间
-                    tweet_time = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                    if tweet_time.replace(tzinfo=None) > cutoff_time:
-                        recent_tweets.append(tweet)
-                except:
-                    # 如果时间解析失败，保留推文
-                    recent_tweets.append(tweet)
-        
-        return recent_tweets
+        """过滤最近指定小时内的推文"""
+        return self.client.filter_recent_tweets(tweets, hours)
 
 class ContentGenerator:
     """内容生成器"""
@@ -534,18 +493,28 @@ def main():
     print("🚀 开始监控账号推文...")
     
     # 检查环境变量
-    if not TWITTER_API_KEY:
-        print("❌ 错误：请设置TWITTER_API_KEY环境变量")
-        return
-    
     if not TWT_ACCOUNTS or TWT_ACCOUNTS == ['']:
         print("❌ 错误：请在.env文件中设置TWT_ACCOUNTS")
         return
     
+    # 检查是否有任何可用的Twitter API配置
+    has_twitter_api = bool(TWITTER_API_KEY)
+    has_twikit_config = bool(os.environ.get('TWITTER_USERNAME') and os.environ.get('TWITTER_PASSWORD'))
+    
+    if not has_twitter_api and not has_twikit_config:
+        print("❌ 错误：请配置Twitter API密钥或Twikit登录凭据")
+        print("   TwitterAPI.io: 设置 TWITTER_API_KEY")
+        print("   Twikit: 设置 TWITTER_USERNAME, TWITTER_PASSWORD, TWITTER_EMAIL")
+        return
+    
     print(f"📋 监控账号列表: {', '.join(TWT_ACCOUNTS)}")
+    if has_twitter_api:
+        print("✅ TwitterAPI.io 已配置")
+    if has_twikit_config:
+        print("✅ Twikit 已配置")
     
     # 初始化组件
-    monitor = TwitterAccountMonitor(TWITTER_API_KEY)
+    monitor = TwitterAccountMonitor()
     generator = ContentGenerator(
         api_key=OPENAI_API_KEY,
         backup_api_key=AI_API_KEY,
