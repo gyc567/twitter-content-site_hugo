@@ -5,6 +5,7 @@
 ## 功能特点
 
 - 🔥 **自动抓取Twitter热门话题**：每天自动获取Twitter上最热门的3个话题
+- 👥 **账号监控功能**：监控指定Twitter账号的最新推文，生成原始内容和AI分析文章
 - 🤖 **AI内容生成**：使用OpenAI自动生成高质量文章
 - 🌍 **双语支持**：支持简体中文和美国英语
 - 💰 **广告变现**：集成Monetag广告系统
@@ -44,11 +45,14 @@ pip install -r requirements.txt
 
 在GitHub仓库设置中添加以下Secrets：
 
-- `TWITTER_BEARER_TOKEN`：Twitter API Bearer Token
+- `TWITTER_API_KEY`：TwitterAPI.io API密钥
 - `OPENAI_API_KEY`：OpenAI API密钥
+- `AI_API_KEY`：备用AI服务API密钥（可选）
+- `AI_BASE_URL`：备用AI服务地址（可选）
+- `TWT_ACCOUNTS`：要监控的Twitter账号列表，用逗号分隔（如：elonmusk,a16z,lookonchain）
 
 获取方式：
-- Twitter API：访问 https://developer.twitter.com/
+- TwitterAPI.io：访问 https://twitterapi.io/
 - OpenAI API：访问 https://platform.openai.com/
 
 ### 4. 配置Monetag
@@ -60,18 +64,76 @@ pip install -r requirements.txt
 ### 5. 本地测试
 
 ```bash
-# 设置环境变量
-export TWITTER_BEARER_TOKEN="your_token"
-export OPENAI_API_KEY="your_key"
+# 复制环境变量配置文件
+cp .env.example .env
 
-# 运行内容生成脚本
+# 编辑.env文件，填入您的API密钥
+# TWITTER_API_KEY=your_twitter_api_key
+# OPENAI_API_KEY=your_openai_api_key
+# TWT_ACCOUNTS=lookonchain,elonmusk,a16z
+
+# 测试账号监控功能
+python scripts/test_monitor_accounts.py
+
+# 运行热门话题内容生成脚本
 python scripts/generate_content.py
+
+# 运行账号监控脚本
+python scripts/monitor_accounts.py
 
 # 启动Hugo服务器
 hugo server -D
 ```
 
 访问 http://localhost:1313 查看网站
+
+## 新功能：账号监控
+
+### 功能说明
+
+账号监控功能可以：
+1. **监控指定Twitter账号**：从`.env`文件中的`TWT_ACCOUNTS`配置获取要监控的账号列表
+2. **生成原始推文文章**：将监控账号的最新推文原始内容整理成文章
+3. **生成AI分析文章**：基于推文内容使用AI生成专业的市场分析文章
+4. **双语支持**：同时生成中文和英文版本的文章
+5. **自动化运行**：每天零晨12点通过GitHub Actions自动执行
+
+### 配置监控账号
+
+在`.env`文件中设置要监控的Twitter账号：
+
+```bash
+# 多个账号用逗号分隔，不需要@符号
+TWT_ACCOUNTS=lookonchain,elonmusk,a16z,VitalikButerin,cz_binance
+```
+
+### 生成的文章类型
+
+1. **原始推文汇总文章**：
+   - 文件名格式：`YYYY-MM-DD-monitored-tweets-raw.md`
+   - 包含所有监控账号的最新推文原始内容
+   - 显示推文的互动数据（点赞、转发、评论）
+
+2. **AI分析文章**：
+   - 文件名格式：`YYYY-MM-DD-monitored-analysis.md`
+   - 基于推文内容生成的专业市场分析
+   - 包含趋势分析、投资建议等内容
+
+### 手动运行
+
+```bash
+# 运行账号监控脚本
+python scripts/monitor_accounts.py
+
+# 测试功能
+python scripts/test_monitor_accounts.py
+```
+
+### 时间过滤
+
+- 默认只处理最近24小时内的推文
+- 如果没有最近推文，会使用所有获取到的推文
+- 可以在脚本中修改时间范围
 
 ## 部署
 
@@ -130,10 +192,14 @@ twitter-content-site/
 │       ├── monetag.html        # Monetag广告集成
 │       └── ads.html            # 广告展示组件
 ├── scripts/
-│   └── generate_content.py     # 内容生成脚本
+│   ├── generate_content.py     # 热门话题内容生成脚本
+│   ├── monitor_accounts.py     # 账号监控脚本
+│   └── test_monitor_accounts.py # 账号监控测试脚本
 ├── themes/
 │   └── paper/                  # Hugo主题
+├── .env.example                # 环境变量配置示例
 ├── hugo.toml                   # Hugo配置
+├── md-template.md              # 文章模板参考
 ├── requirements.txt            # Python依赖
 └── README.md                   # 项目文档
 ```

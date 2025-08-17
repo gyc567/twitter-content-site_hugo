@@ -20,9 +20,11 @@ load_dotenv()
 # 配置
 TWITTER_API_KEY = os.environ.get('TWITTER_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+AI_API_KEY = os.environ.get('AI_API_KEY')
+AI_BASE_URL = os.environ.get('AI_BASE_URL')
 CONTENT_DIR = Path(__file__).parent.parent / 'content'
 
-# 初始化OpenAI
+# 初始化OpenAI（保持向后兼容）
 openai.api_key = OPENAI_API_KEY
 
 class TwitterTrendFetcher:
@@ -229,20 +231,38 @@ class TwitterTrendFetcher:
         ]
 
 class ContentGenerator:
-    """内容生成器"""
+    """内容生成器，支持OpenAI和备用AI服务"""
     
-    def __init__(self, api_key: str):
-        self.client = openai.OpenAI(api_key=api_key)
+    def __init__(self, api_key: str, backup_api_key: str = None, backup_base_url: str = None):
+        self.primary_client = openai.OpenAI(api_key=api_key)
+        self.backup_client = None
+        
+        # 初始化备用客户端
+        if backup_api_key and backup_base_url:
+            try:
+                self.backup_client = openai.OpenAI(
+                    api_key=backup_api_key,
+                    base_url=backup_base_url
+                )
+                print(f"✅ 备用AI服务已配置: {backup_base_url}")
+            except Exception as e:
+                print(f"⚠️  备用AI服务配置失败: {e}")
+                self.backup_client = None
+        
+        # 为了向后兼容，保持 self.client 属性
+        self.client = self.primary_client
     
     def generate_article(self, topic: Dict, language: str = 'en') -> Dict:
         """
-        基于话题生成文章
+        基于话题生成文章，支持主备AI服务切换
         返回包含标题和内容的字典
         """
         prompt = self._create_prompt(topic, language)
         
+        # 首先尝试主要的OpenAI服务
         try:
-            response = self.client.chat.completions.create(
+            print("🤖 尝试使用主要AI服务生成文章...")
+            response = self.primary_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a professional content writer specializing in social media trends."},
@@ -259,16 +279,58 @@ class ContentGenerator:
             title = lines[0].replace('Title:', '').replace('标题：', '').strip()
             article_content = '\n'.join(lines[2:])  # 跳过标题和空行
             
+            print("✅ 主要AI服务生成成功")
             return {
                 'title': title,
                 'content': article_content,
                 'topic': topic['topic'],
-                'language': language
+                'language': language,
+                'ai_service': 'primary'
             }
             
         except Exception as e:
-            print(f"生成文章失败: {e}")
-            return self._get_fallback_article(topic, language)
+            print(f"❌ 主要AI服务失败: {e}")
+            
+            # 尝试备用AI服务
+            if self.backup_client:
+                try:
+                    print("🔄 尝试使用备用AI服务生成文章...")
+                    response = self.backup_client.chat.completions.create(
+                        model="deepseek-chat",  # 备用服务的模型名
+                        messages=[
+                            {"role": "system", "content": "You are a professional content writer specializing in social media trends."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.7,
+                        max_tokens=1500
+                    )
+                    
+                    content = response.choices[0].message.content
+                    
+                    # 解析生成的内容
+                    lines = content.strip().split('\n')
+                    title = lines[0].replace('Title:', '').replace('标题：', '').strip()
+                    article_content = '\n'.join(lines[2:])  # 跳过标题和空行
+                    
+                    print("✅ 备用AI服务生成成功")
+                    return {
+                        'title': title,
+                        'content': article_content,
+                        'topic': topic['topic'],
+                        'language': language,
+                        'ai_service': 'backup'
+                    }
+                    
+                except Exception as backup_e:
+                    print(f"❌ 备用AI服务也失败: {backup_e}")
+            else:
+                print("⚠️  未配置备用AI服务")
+            
+            # 所有AI服务都失败，使用本地备用文章
+            print("🔄 使用本地备用文章")
+            fallback_article = self._get_fallback_article(topic, language)
+            fallback_article['ai_service'] = 'fallback'
+            return fallback_article
     
     def _create_prompt(self, topic: Dict, language: str) -> str:
         """创建生成提示"""
@@ -748,7 +810,11 @@ def main():
     # 初始化组件
     fetcher = TwitterTrendFetcher(TWITTER_API_KEY)
     if not demo_mode:
-        generator = ContentGenerator(OPENAI_API_KEY)
+        generator = ContentGenerator(
+            api_key=OPENAI_API_KEY,
+            backup_api_key=AI_API_KEY,
+            backup_base_url=AI_BASE_URL
+        )
     publisher = HugoPublisher(CONTENT_DIR)
     
     # 获取加密货币相关的热门推文

@@ -32,12 +32,24 @@ jobs:
           hugo-version: 'latest'
           extended: true
       
-      - name: Generate content
+      - name: Generate trending content
         env:
-          TWITTER_BEARER_TOKEN: ${{ secrets.TWITTER_BEARER_TOKEN }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
         run: |
           python scripts/generate_content.py
+      
+      - name: Monitor accounts and generate content
+        env:
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          TWT_ACCOUNTS: ${{ secrets.TWT_ACCOUNTS }}
+        run: |
+          python scripts/monitor_accounts.py
       
       - name: Build Hugo site
         run: |

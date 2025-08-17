@@ -45,20 +45,25 @@ def test_twitter_api():
             print("✅ API连接成功！")
             
             # 显示响应数据结构
-            if 'data' in data:
-                tweets = data['data']
+            if 'tweets' in data:
+                tweets = data['tweets']
                 print(f"📊 获取到 {len(tweets)} 条推文")
                 
                 if tweets:
                     print("\n📝 示例推文:")
                     for i, tweet in enumerate(tweets[:3], 1):
                         text = tweet.get('text', 'No text')[:100]
-                        print(f"   {i}. {text}...")
+                        author = tweet.get('author', {}).get('name', '未知用户')
+                        like_count = tweet.get('likeCount', 0)
+                        retweet_count = tweet.get('retweetCount', 0)
+                        print(f"   {i}. 👤{author} 👍{like_count} 🔄{retweet_count}")
+                        print(f"      📝 {text}...")
                 else:
                     print("⚠️  未获取到推文数据")
             else:
-                print("⚠️  响应中没有'data'字段")
-                print(f"   响应内容: {data}")
+                print("⚠️  响应中没有'tweets'字段")
+                print(f"   可用字段: {list(data.keys())}")
+                print(f"   响应内容预览: {str(data)[:200]}...")
             
             return True
             
